@@ -26,7 +26,7 @@ library(shiny)
 data <- readRDS("./data/hepatitisc_board.rds")
 
 #Use for selection of areas
-board_list <- unique(data$nhsboard[data$nhsboard != "Scotland"])
+board_list <- sort(unique(data$nhsboard[data$nhsboard != "Scotland"]))
 
 #ScotPHO logo. 
 #Needs to be https address or if local in code 64 (the latter does not work with 4.7 plotly)
@@ -105,7 +105,7 @@ server <- function(input, output) {
            yaxis = list(title = yaxistitle, rangemode="tozero", fixedrange=TRUE), 
            xaxis = list(title = "Year",  fixedrange=TRUE),  
            font = list(family = 'Arial, sans-serif'), #font
-           margin = list(pad = 4), #margin-paddings
+           margin = list(pad = 4, t = 30), #margin-paddings
            #margin=list( l = 70, r = 50, b = 150, t = 50, pad = 4 ), #margin-paddings
            hovermode = 'false',  # to get hover compare mode as default
            images = scotpho_logo) %>% 
