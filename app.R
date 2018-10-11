@@ -1,16 +1,15 @@
 #Code to create chart of hepatitis c by board.
 
+############################.
+## Global ----
+############################.
+############################.
+##Packages 
 
-############################.
-##Packages ----
-############################.
 library(dplyr) #data manipulation
 library(plotly) #charts
 library(shiny)
 
-############################.
-## Global ----
-############################.
 #Preparing data - not needed unless new data coming through
 # library(reshape2)
 # library (readr)
@@ -40,7 +39,7 @@ scotpho_logo <-  list(source ="https://raw.githubusercontent.com/jvillacampa/tes
 #Height and widths as percentages to allow responsiveness
 #Using divs as issues with classing css 
 ui <- fluidPage(style="width: 650px; height: 500px; ", 
-                div(style= "width:100%",
+                div(style= "width:100%", #Filters on top of page
                           h4("Chart 1. Persons in Scotland reported to be hepatitis C antibody positive"),
                   div(style = "width: 50%; float: left;",
                       selectInput("measure", label = "Select a measure type",
@@ -50,9 +49,9 @@ ui <- fluidPage(style="width: 650px; height: 500px; ",
                   selectInput("area", label = "Select a health board", 
                             choices = board_list))
                 ),
-                div(style= "width:100%; float: left;",
+                div(style= "width:100%; float: left;", #Main panel
                   plotlyOutput("chart", width = "100%", height = "350px"),
-                  p(div(style = "width: 25%; float: left;",
+                  p(div(style = "width: 25%; float: left;", #Footer
                         HTML("Source: <a href='http://www.hps.scot.nhs.uk/bbvsti/wrdetail.aspx?id=73581&wrtype=6'>HPS</a>")),
                     div(style = "width: 25%; float: left;",
                         downloadLink('download_data', 'Download data')),
@@ -106,7 +105,6 @@ server <- function(input, output) {
            xaxis = list(title = "Year",  fixedrange=TRUE),  
            font = list(family = 'Arial, sans-serif'), #font
            margin = list(pad = 4, t = 50), #margin-paddings
-           #margin=list( l = 70, r = 50, b = 150, t = 50, pad = 4 ), #margin-paddings
            hovermode = 'false',  # to get hover compare mode as default
            images = scotpho_logo) %>% 
       config(displayModeBar= T, displaylogo = F, collaborate=F, editable =F) # taking out plotly logo and collaborate button
