@@ -73,7 +73,7 @@ ui <- fluidPage(style="width: 650px; height: 500px; ",
                 div(style= "width:100%; float: left;", #Main panel
                   plotlyOutput("chart", width = "100%", height = "350px"),
                   p(div(style = "width: 25%; float: left;", #Footer
-                        HTML("Source: <a href='https://hpspubsrepo.blob.core.windows.net/hps-website/nss/2834/documents/1_hcv-testing-diagnosis-treatment-scotland-2018.pdf'>HPS</a>")),
+                        HTML("Source: <a href='https://hpspubsrepo.blob.core.windows.net/hps-website/nss/2834/documents/1_hcv-testing-diagnosis-treatment-scotland-2018.pdf' target='_blank'>HPS</a>")),
                     div(style = "width: 25%; float: left;",
                         downloadLink('download_data', 'Download data')),
                     div(style = "width: 50%; float: left;",
