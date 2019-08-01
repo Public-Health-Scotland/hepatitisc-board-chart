@@ -11,25 +11,46 @@ library(plotly) #charts
 library(shiny)
 
 #Preparing data - not needed unless new data coming through
-# library(reshape2)
-# library (readr)
+# library(tidyr)
+# library(readr)
+# library(dplyr)
 # 
-# data <- read_csv("./data/hepatitisc_board.csv") %>% 
+# hep_c <- read_csv("data/hepatitisc_board.csv") %>%
 #   mutate_if(is.character, factor) %>%  #converting characters into factors
-#   setNames(tolower(names(.))) %>% 
-#   melt(variable.name = "year") 
-# data$year <- gsub("y", "", data$year)
+#   setNames(tolower(names(.))) %>% #variable names to lower case
+#   gather(year, number, -nhsboard) %>% # to long format
+#   mutate(year = as.numeric(gsub("y", "", year))) #taking out y from year
 # 
-# saveRDS(data, "./data/hepatitisc_board.rds")
+# # Bringing population to calculate rates
+# pop_lookup <- readRDS("//PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/CA_pop_allages.rds") %>% 
+#   # selecting years of interest, only hb and scot and no island boards
+#   subset(year > 2008 & substr(code,1,3) != "S12" & 
+#            !(code %in% c("S08000025", "S08000026","S08000028")))
+# 
+# names_lookup <- read_csv("/conf/linkage/output/lookups/geography/Codes_and_Names/Health Board Area 2014 Lookup.csv") %>% 
+#   setNames(tolower(names(.))) %>%  #variable names to lower case
+#   rename(code = healthboardarea2014code) %>%  select(-healthboardarea2014name)
+# 
+# # merging with codes
+# hep_c <- left_join(hep_c, names_lookup, by = c("nhsboard" = "nrshealthboardareaname")) %>% 
+#   mutate(code = case_when(nhsboard == "Scotland" ~ "S00000001", TRUE ~ code))
+# 
+# hep_c <- left_join(hep_c, pop_lookup, c("code", "year")) %>% 
+#   mutate(rate = round(number/denominator*100000, 1)) %>% # calculate rate
+#   select(-denominator, -code) %>% 
+#   gather(measure, value, c(-nhsboard, -year)) %>% 
+#   mutate(measure = recode(measure, "number" = "Number", "rate" = "Rate"))
+# 
+# saveRDS(hep_c, "data/hepatitisc_board.rds")
 
-data <- readRDS("./data/hepatitisc_board.rds")
+hep_c <- readRDS("data/hepatitisc_board.rds") #reading data for app
 
 #Use for selection of areas
-board_list <- sort(unique(data$nhsboard[data$nhsboard != "Scotland"]))
+board_list <- sort(unique(hep_c$nhsboard[hep_c$nhsboard != "Scotland"]))
 
 #ScotPHO logo. 
 #Needs to be https address or if local in code 64 (the latter does not work with 4.7 plotly)
-scotpho_logo <-  list(source ="https://raw.githubusercontent.com/jvillacampa/test/master/scotpho.png",
+scotpho_logo <-  list(source ="https://raw.githubusercontent.com/ScotPHO/plotly-charts/master/scotpho.png",
                       xref = "paper", yref = "paper",
                       x= -0.09, y= 1.2, sizex = 0.22, sizey = 0.18, opacity = 1)
 
@@ -52,7 +73,7 @@ ui <- fluidPage(style="width: 650px; height: 500px; ",
                 div(style= "width:100%; float: left;", #Main panel
                   plotlyOutput("chart", width = "100%", height = "350px"),
                   p(div(style = "width: 25%; float: left;", #Footer
-                        HTML("Source: <a href='http://www.hps.scot.nhs.uk/bbvsti/wrdetail.aspx?id=73581&wrtype=6'>HPS</a>")),
+                        HTML("Source: <a href='https://hpspubsrepo.blob.core.windows.net/hps-website/nss/2834/documents/1_hcv-testing-diagnosis-treatment-scotland-2018.pdf'>HPS</a>")),
                     div(style = "width: 25%; float: left;",
                         downloadLink('download_data', 'Download data')),
                     div(style = "width: 50%; float: left;",
@@ -69,7 +90,7 @@ server <- function(input, output) {
   # Allowing user to download data
   output$download_data <- downloadHandler( 
     filename =  'hepatitisc_data.csv', content = function(file) { 
-      write.csv(data, file, row.names=FALSE) })
+      write.csv(hep_c, file, row.names=FALSE) })
   
   ############################.
   #Visualization
@@ -87,9 +108,9 @@ server <- function(input, output) {
       } else {
 
     #Data for Scotland line
-    data_scot <- data %>% subset(nhsboard=="Scotland" & measure==input$measure)
+    data_scot <- hep_c %>% subset(nhsboard=="Scotland" & measure==input$measure)
     #Data for Health board line
-    data_board <- data %>% subset(nhsboard==input$area & measure==input$measure)
+    data_board <- hep_c %>% subset(nhsboard==input$area & measure==input$measure)
     
     #y axis title
     yaxistitle <- ifelse(input$measure == "Rate", "Rate per 100,000", "Number of diagnosis")
@@ -118,3 +139,5 @@ server <- function(input, output) {
 ############################.
 
 shinyApp(ui = ui, server = server)
+
+##END
