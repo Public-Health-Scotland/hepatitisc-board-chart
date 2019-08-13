@@ -13,7 +13,8 @@ library(shiny)
 #Preparing data - not needed unless new data coming through
 # library(tidyr)
 # library(readr)
-# library(dplyr)
+# 
+# cl_out_pop <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/"
 # 
 # hep_c <- read_csv("data/hepatitisc_board.csv") %>%
 #   mutate_if(is.character, factor) %>%  #converting characters into factors
@@ -22,23 +23,29 @@ library(shiny)
 #   mutate(year = as.numeric(gsub("y", "", year))) #taking out y from year
 # 
 # # Bringing population to calculate rates
-# pop_lookup <- readRDS("//PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/CA_pop_allages.rds") %>% 
-#   # selecting years of interest, only hb and scot and no island boards
-#   subset(year > 2008 & substr(code,1,3) != "S12" & 
-#            !(code %in% c("S08000025", "S08000026","S08000028")))
+# pop_lookup <- readRDS(paste0(cl_out_pop, "HB2019_pop_est_1981_2018.rds")) %>% 
+#   setNames(tolower(names(.))) %>%  #variables to lower case
+#   subset(year>2008) %>%  #select only 2002+
+#   # Aggregating to get hb totals
+#   rename(code = hb2014) %>%  select(code, year, pop) %>% group_by(code, year) %>% 
+#   summarise(denominator = sum(pop)) %>% ungroup %>% group_by(year) %>% 
+#   # Adding Scotland totals
+#   bind_rows(summarise_all(., list(~if(is.numeric(.)) sum(.) else "S00000001"))) %>% 
+#   ungroup()
 # 
-# names_lookup <- read_csv("/conf/linkage/output/lookups/geography/Codes_and_Names/Health Board Area 2014 Lookup.csv") %>% 
+# #Codes and names for areas 
+# names_lookup <- read_csv("/conf/linkage/output/lookups/geography/Codes_and_Names/Health Board Area 2014 Lookup.csv") %>%
 #   setNames(tolower(names(.))) %>%  #variable names to lower case
 #   rename(code = healthboardarea2014code) %>%  select(-healthboardarea2014name)
 # 
 # # merging with codes
-# hep_c <- left_join(hep_c, names_lookup, by = c("nhsboard" = "nrshealthboardareaname")) %>% 
+# hep_c <- left_join(hep_c, names_lookup, by = c("nhsboard" = "nrshealthboardareaname")) %>%
 #   mutate(code = case_when(nhsboard == "Scotland" ~ "S00000001", TRUE ~ code))
 # 
-# hep_c <- left_join(hep_c, pop_lookup, c("code", "year")) %>% 
+# hep_c <- left_join(hep_c, pop_lookup, c("code", "year")) %>%
 #   mutate(rate = round(number/denominator*100000, 1)) %>% # calculate rate
-#   select(-denominator, -code) %>% 
-#   gather(measure, value, c(-nhsboard, -year)) %>% 
+#   select(-denominator, -code) %>%
+#   gather(measure, value, c(-nhsboard, -year)) %>%
 #   mutate(measure = recode(measure, "number" = "Number", "rate" = "Rate"))
 # 
 # saveRDS(hep_c, "data/hepatitisc_board.rds")
