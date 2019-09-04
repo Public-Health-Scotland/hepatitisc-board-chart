@@ -23,23 +23,23 @@ library(shiny)
 #   mutate(year = as.numeric(gsub("y", "", year))) #taking out y from year
 # 
 # # Bringing population to calculate rates
-# pop_lookup <- readRDS(paste0(cl_out_pop, "HB2019_pop_est_1981_2018.rds")) %>% 
+# pop_lookup <- readRDS(paste0(cl_out_pop, "HB2019_pop_est_1981_2018.rds")) %>%
 #   setNames(tolower(names(.))) %>%  #variables to lower case
 #   subset(year>2008) %>%  #select only 2002+
 #   # Aggregating to get hb totals
-#   rename(code = hb2014) %>%  select(code, year, pop) %>% group_by(code, year) %>% 
-#   summarise(denominator = sum(pop)) %>% ungroup %>% group_by(year) %>% 
+#   rename(code = hb2019) %>%  select(code, year, pop) %>% group_by(code, year) %>%
+#   summarise(denominator = sum(pop)) %>% ungroup %>% group_by(year) %>%
 #   # Adding Scotland totals
-#   bind_rows(summarise_all(., list(~if(is.numeric(.)) sum(.) else "S00000001"))) %>% 
+#   bind_rows(summarise_all(., list(~if(is.numeric(.)) sum(.) else "S00000001"))) %>%
 #   ungroup()
 # 
-# #Codes and names for areas 
-# names_lookup <- read_csv("/conf/linkage/output/lookups/geography/Codes_and_Names/Health Board Area 2014 Lookup.csv") %>%
-#   setNames(tolower(names(.))) %>%  #variable names to lower case
-#   rename(code = healthboardarea2014code) %>%  select(-healthboardarea2014name)
+# #Codes and names for areas
+# names_lookup <- readRDS("/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/HBdictionary.rds") %>%
+#   mutate(areaname = gsub("NHS ", "", areaname), 
+#          areaname = gsub(" and ", " & ", areaname))
 # 
 # # merging with codes
-# hep_c <- left_join(hep_c, names_lookup, by = c("nhsboard" = "nrshealthboardareaname")) %>%
+# hep_c <- left_join(hep_c, names_lookup, by = c("nhsboard" = "areaname")) %>%
 #   mutate(code = case_when(nhsboard == "Scotland" ~ "S00000001", TRUE ~ code))
 # 
 # hep_c <- left_join(hep_c, pop_lookup, c("code", "year")) %>%
