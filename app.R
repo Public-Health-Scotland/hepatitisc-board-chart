@@ -19,23 +19,23 @@ cl_out_pop <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/" #pop
 filepath <- "/PHI_conf/ScotPHO/Website/Charts/Health Conditions/Hepatitis C/shiny_data" #shiny data
 
 #read in currently deployed data
-current_data <- read_csv(paste0(filepath, "/hepatitisc_data_to_2018.csv"))
+current_data <- read_csv(paste0(filepath, "/hepatitisc_data_to_2021.csv"))
 
 #read in new data
-hep_c <- read_csv(paste0(filepath, "/hepatitisc_data_2021.csv")) |> 
+hep_c <- read_csv(paste0(filepath, "/hepatitisc_data_2022.csv")) |> 
   mutate_if(is.character, factor) |>  #converting characters into factors
   clean_names() #variable names to lower case
 
 #bring in population to calculate rates
 pop_lookup <- readRDS(paste0(cl_out_pop, "HB2019_pop_est_1981_2022.rds")) |> 
   clean_names() |>   #variables to lower case
-  subset(year=="2021") |>   #select only new year to be appended
+  subset(year=="2022") |>   #select only new year to be appended
   # Aggregating to get hb totals
   rename(code = hb2019) |>   select(code, year, pop) |>  group_by(code, year) |> 
   summarise(denominator = sum(pop)) |>  ungroup() |>  group_by(year) |> 
   # Adding Scotland totals
   adorn_totals("row", name = "S00000001") |>
-  mutate(year = case_when(code == "S00000001" ~ 2021, TRUE ~ year)) #Update this line with newest year to match other rows
+  mutate(year = case_when(code == "S00000001" ~ 2022, TRUE ~ year)) #Update this line with newest year to match other rows
   
 #Codes and names for areas
 names_lookup <- readRDS("/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/HBdictionary.rds") |> 
@@ -55,10 +55,12 @@ hep_c <- left_join(hep_c, pop_lookup, c("code", "year")) |>
 #append new data onto current data
 hep_c <- rbind(current_data, hep_c)
 
+#save files
+saveRDS(hep_c, paste0(filepath, "/shiny_data_hepatitisc_board.rds"))
 
-saveRDS(hep_c, paste0(filepath, "_hepatitisc_board.rds"))
+write.csv(hep_c, paste0(filepath, "/hepatitisc_data_to_2022.csv"), row.names = FALSE)
 
-hep_c <- readRDS(paste0(filepath, "_hepatitisc_board.rds")) #reading data for app
+hep_c <- readRDS(paste0(filepath, "/shiny_data_hepatitisc_board.rds")) #reading data for app
 
 #Use for selection of areas
 board_list <- sort(unique(hep_c$nhsboard[hep_c$nhsboard != "Scotland"]))
