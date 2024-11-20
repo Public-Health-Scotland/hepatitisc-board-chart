@@ -8,49 +8,57 @@
 
 library(dplyr) #data manipulation
 library(plotly) #charts
-library(shiny)
+library(shiny) #shiny app
+library(tidyr)
+library(readr) #for reading in csv
+library(janitor) #for data cleaning
 
-#Preparing data - not needed unless new data coming through
-# library(tidyr)
-# library(readr)
-# 
-# cl_out_pop <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/"
-# 
-# hep_c <- read_csv("data/hepatitisc_board.csv") %>%
-#   mutate_if(is.character, factor) %>%  #converting characters into factors
-#   setNames(tolower(names(.))) %>% #variable names to lower case
-#   gather(year, number, -nhsboard) %>% # to long format
-#   mutate(year = as.numeric(gsub("y", "", year))) #taking out y from year
-# 
-# # Bringing population to calculate rates
-# pop_lookup <- readRDS(paste0(cl_out_pop, "HB2019_pop_est_1981_2018.rds")) %>%
-#   setNames(tolower(names(.))) %>%  #variables to lower case
-#   subset(year>2008) %>%  #select only 2002+
-#   # Aggregating to get hb totals
-#   rename(code = hb2019) %>%  select(code, year, pop) %>% group_by(code, year) %>%
-#   summarise(denominator = sum(pop)) %>% ungroup %>% group_by(year) %>%
-#   # Adding Scotland totals
-#   bind_rows(summarise_all(., list(~if(is.numeric(.)) sum(.) else "S00000001"))) %>%
-#   ungroup()
-# 
-# #Codes and names for areas
-# names_lookup <- readRDS("/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/HBdictionary.rds") %>%
-#   mutate(areaname = gsub("NHS ", "", areaname), 
-#          areaname = gsub(" and ", " & ", areaname))
-# 
-# # merging with codes
-# hep_c <- left_join(hep_c, names_lookup, by = c("nhsboard" = "areaname")) %>%
-#   mutate(code = case_when(nhsboard == "Scotland" ~ "S00000001", TRUE ~ code))
-# 
-# hep_c <- left_join(hep_c, pop_lookup, c("code", "year")) %>%
-#   mutate(rate = round(number/denominator*100000, 1)) %>% # calculate rate
-#   select(-denominator, -code) %>%
-#   gather(measure, value, c(-nhsboard, -year)) %>%
-#   mutate(measure = recode(measure, "number" = "Number", "rate" = "Rate"))
-# 
-# saveRDS(hep_c, "data/hepatitisc_board.rds")
 
-hep_c <- readRDS("data/hepatitisc_board.rds") #reading data for app
+#Set filepaths 
+cl_out_pop <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/" #population lookups to calculate rates
+filepath <- "/PHI_conf/ScotPHO/Website/Charts/Health Conditions/Hepatitis C/shiny_data" #shiny data
+
+#read in currently deployed data
+current_data <- read_csv(paste0(filepath, "/hepatitisc_data_to_2018.csv"))
+
+#read in new data
+hep_c <- read_csv(paste0(filepath, "/hepatitisc_data_2021.csv")) |> 
+  mutate_if(is.character, factor) |>  #converting characters into factors
+  clean_names() #variable names to lower case
+
+#bring in population to calculate rates
+pop_lookup <- readRDS(paste0(cl_out_pop, "HB2019_pop_est_1981_2022.rds")) |> 
+  clean_names() |>   #variables to lower case
+  subset(year=="2021") |>   #select only new year to be appended
+  # Aggregating to get hb totals
+  rename(code = hb2019) |>   select(code, year, pop) |>  group_by(code, year) |> 
+  summarise(denominator = sum(pop)) |>  ungroup() |>  group_by(year) |> 
+  # Adding Scotland totals
+  adorn_totals("row", name = "S00000001") |>
+  mutate(year = case_when(code == "S00000001" ~ 2021, TRUE ~ year)) #Update this line with newest year to match other rows
+  
+#Codes and names for areas
+names_lookup <- readRDS("/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/HBdictionary.rds") |> 
+  mutate(areaname = gsub("NHS ", "", areaname),
+         areaname = gsub(" and ", " & ", areaname))
+
+# merging with codes
+hep_c <- left_join(hep_c, names_lookup, by = c("nhsboard" = "areaname")) |> 
+  mutate(code = case_when(nhsboard == "Scotland" ~ "S00000001", TRUE ~ code))
+
+hep_c <- left_join(hep_c, pop_lookup, c("code", "year")) |> 
+  mutate(rate = round(number/denominator*100000, 1))  |>  # calculate rate
+  select(-denominator, -code) |> 
+  gather(measure, value, c(-nhsboard, -year))  |> 
+  mutate(measure = recode(measure, "number" = "Number", "rate" = "Rate"))
+
+#append new data onto current data
+hep_c <- rbind(current_data, hep_c)
+
+
+saveRDS(hep_c, paste0(filepath, "_hepatitisc_board.rds"))
+
+hep_c <- readRDS(paste0(filepath, "_hepatitisc_board.rds")) #reading data for app
 
 #Use for selection of areas
 board_list <- sort(unique(hep_c$nhsboard[hep_c$nhsboard != "Scotland"]))
