@@ -1,74 +1,107 @@
-#Code to create chart of hepatitis c by board.
+######################.
+### Analyst notes ----
+######################.
 
-############################.
-## Global ----
-############################.
-############################.
-##Packages 
+# This script prepares a data file and a shiny app to be embedded on the following page of the scotpho website: https://www.scotpho.org.uk/health-conditions/hepatitis-c/data/scotland-and-uk/
 
-library(dplyr) #data manipulation
+# instructions:
+# Source new data from [add instructions] and save it in the following folder: /PHI_conf/ScotPHO/Website/Charts/Health Conditions/Hepatitis C/shiny_data
+# Un-comment the code in part 1 below and update the following:
+# a. current_data filepath to [add instructions] 
+# b. the filepath for reading in the hep_c data
+# c. the population lookups file and year
+
+# This will prepare a data file within this repository to use to create the chart in the shiny app 
+# Make sure to comment the code back out again when deploying the shiny app, otherwise it won't work properly!
+
+
+# Part 1 - data prep
+# Part 2 - shiny app 
+
+
+###########################.
+### Part 1 -  data prep ----
+###########################.
+
+# packages
+# library(tidyr)
+# library(readr) # for reading in csv
+# library(janitor) # for data cleaning
+# library(dplyr) # data manipulation
+
+# #Set filepaths 
+# cl_out_pop <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/" #population lookups to calculate rates
+# filepath <- "/PHI_conf/ScotPHO/Website/Charts/Health Conditions/Hepatitis C/shiny_data" #shiny data
+# 
+# #read in currently deployed data
+# current_data <- read_csv(paste0(filepath, "/hepatitisc_data_to_2021.csv"))
+# 
+# #read in new data
+# hep_c <- read_csv(paste0(filepath, "/hepatitisc_data_2022.csv")) |> 
+#   mutate_if(is.character, factor) |>  #converting characters into factors
+#   clean_names() #variable names to lower case
+# 
+# #bring in population to calculate rates
+# pop_lookup <- readRDS(paste0(cl_out_pop, "HB2019_pop_est_1981_2022.rds")) |>
+#   clean_names() |>   #variables to lower case
+#   subset(year=="2022") |>   #select only new year to be appended
+#   # Aggregating to get hb totals
+#   rename(code = hb2019) |>  
+#   select(code, year, pop) |>  
+#   group_by(code, year) |> 
+#   summarise(denominator = sum(pop)) |>  ungroup() |>  group_by(year) |> 
+#   # Adding Scotland totals
+#   adorn_totals("row", name = "S00000001") |>
+#   mutate(year = case_when(code == "S00000001" ~ 2022, TRUE ~ year)) #Update this line with newest year to match other rows
+# 
+# #Codes and names for areas
+# names_lookup <- readRDS("/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/HBdictionary.rds") |> 
+#   mutate(areaname = gsub("NHS ", "", areaname),
+#          areaname = gsub(" and ", " & ", areaname))
+# 
+# # merging with codes
+# hep_c <- left_join(hep_c, names_lookup, by = c("nhsboard" = "areaname")) |> 
+#   mutate(code = case_when(nhsboard == "Scotland" ~ "S00000001", TRUE ~ code))
+# 
+# hep_c <- left_join(hep_c, pop_lookup, c("code", "year")) |> 
+#   mutate(rate = round(number/denominator*100000, 1))  |>  # calculate rate
+#   select(-denominator, -code) |> 
+#   gather(measure, value, c(-nhsboard, -year))  |> 
+#   mutate(measure = recode(measure, "number" = "Number", "rate" = "Rate"))
+# 
+# #append new data onto current data
+# hep_c <- rbind(current_data, hep_c)
+# 
+# 
+# write.csv(hep_c, paste0(filepath, "/hepatitisc_data_to_2022.csv"), row.names = FALSE)
+# 
+# # uncomment to create data folder in repository if running for first time 
+# #dir.create("data/")
+# 
+# # save rds data in data folder
+# saveRDS(hep_c, "data/shiny_data_hepatitisc_board.rds")
+# 
+
+
+#########################.
+# Part 2 - shiny app ----
+########################.
+
+# packages
 library(highcharter) #charts
 library(phsstyles) #for chart colors
 library(shiny) #shiny app
 library(tidyr)
-library(readr) #for reading in csv
-library(janitor) #for data cleaning
+library(dplyr)
 
 
-#Set filepaths 
-cl_out_pop <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/" #population lookups to calculate rates
-filepath <- "/PHI_conf/ScotPHO/Website/Charts/Health Conditions/Hepatitis C/shiny_data" #shiny data
-
-#read in currently deployed data
-current_data <- read_csv(paste0(filepath, "/hepatitisc_data_to_2021.csv"))
-
-#read in new data
-hep_c <- read_csv(paste0(filepath, "/hepatitisc_data_2022.csv")) |> 
-  mutate_if(is.character, factor) |>  #converting characters into factors
-  clean_names() #variable names to lower case
-
-#bring in population to calculate rates
-pop_lookup <- readRDS(paste0(cl_out_pop, "HB2019_pop_est_1981_2022.rds")) |> 
-  clean_names() |>   #variables to lower case
-  subset(year=="2022") |>   #select only new year to be appended
-  # Aggregating to get hb totals
-  rename(code = hb2019) |>   select(code, year, pop) |>  group_by(code, year) |> 
-  summarise(denominator = sum(pop)) |>  ungroup() |>  group_by(year) |> 
-  # Adding Scotland totals
-  adorn_totals("row", name = "S00000001") |>
-  mutate(year = case_when(code == "S00000001" ~ 2022, TRUE ~ year)) #Update this line with newest year to match other rows
-  
-#Codes and names for areas
-names_lookup <- readRDS("/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/HBdictionary.rds") |> 
-  mutate(areaname = gsub("NHS ", "", areaname),
-         areaname = gsub(" and ", " & ", areaname))
-
-# merging with codes
-hep_c <- left_join(hep_c, names_lookup, by = c("nhsboard" = "areaname")) |> 
-  mutate(code = case_when(nhsboard == "Scotland" ~ "S00000001", TRUE ~ code))
-
-hep_c <- left_join(hep_c, pop_lookup, c("code", "year")) |> 
-  mutate(rate = round(number/denominator*100000, 1))  |>  # calculate rate
-  select(-denominator, -code) |> 
-  gather(measure, value, c(-nhsboard, -year))  |> 
-  mutate(measure = recode(measure, "number" = "Number", "rate" = "Rate"))
-
-#append new data onto current data
-hep_c <- rbind(current_data, hep_c)
-
-#save files
-saveRDS(hep_c, paste0(filepath, "/shiny_data_hepatitisc_board.rds"))
-
-write.csv(hep_c, paste0(filepath, "/hepatitisc_data_to_2022.csv"), row.names = FALSE)
-
-hep_c <- readRDS(paste0(filepath, "/shiny_data_hepatitisc_board.rds")) #reading data for app
+# data prepared and saved from part 1 
+hep_c <- readRDS("data/shiny_data_hepatitisc_board.rds") # reading data for app
 
 #Use for selection of areas
 board_list <- sort(unique(hep_c$nhsboard[hep_c$nhsboard != "Scotland"]))
 
-############################.
-## Visual interface ----
-############################.
+# UI
 #Height and widths as percentages to allow responsiveness
 #Using divs as issues with classing css 
 ui <- fluidPage(style="width: 650px; height: 500px; ", 
@@ -96,9 +129,7 @@ ui <- fluidPage(style="width: 650px; height: 500px; ",
                   )
                 )
 
-############################.
-## Server ----
-############################.
+# Server
 server <- function(input, output) {
   
   # Allowing user to download data
@@ -136,10 +167,7 @@ server <- function(input, output) {
 
 
 
-############################.
-## Calling app ----
-############################.
-
+# calling app 
 shinyApp(ui = ui, server = server)
 
 ##END
