@@ -14,6 +14,8 @@
 # This will prepare a data file within this repository to use to create the chart in the shiny app 
 # Make sure to comment the code back out again when deploying the shiny app, otherwise it won't work properly!
 
+# Once the data/app is ready and has been checked, deploy to the following URL to update the shiny app on
+# the webpage:  https://scotland.shinyapps.io/scotpho-hepatitisc-board/ 
 
 # Part 1 - data prep
 # Part 2 - shiny app 
